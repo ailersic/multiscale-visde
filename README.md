@@ -19,6 +19,8 @@ All cases were trained with Adam using an initial learning rate of 0.001 and an 
   <img align="middle" src="./images/cylinder_2d/512_5_2000_0.001_1000/test_multiscale.gif" alt="Multiscale 2D Cylinder Flow Model" width="100%"/>
 </p>
 
+If the above gif is not rendering, view it [here.](images/cylinder_2d/512_5_2000_0.001_1000/test_multiscale.gif)
+
 ## 2D Burgers' Equation
 
 2D Burgers' equation multi-trajectory dataset. Trained for 500 epochs.
@@ -33,6 +35,8 @@ All cases were trained with Adam using an initial learning rate of 0.001 and an 
 <p align="center">
   <img align="middle" src="./images/burgers_2d/64_5_500_0.001_1000/test_multiscale.gif" alt="Multiscale 2D Burgers Model" width="100%"/>
 </p>
+
+If the above gif is not rendering, view it [here.](images/burgers_2d/64_5_500_0.001_1000/test_multiscale.gif)
 
 ## 1D Korteweg - de Vries Equation
 
@@ -72,6 +76,8 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
 
 </div>
 
+If the above plots are not rendering, view them [here.](images/kdv_1d/20_0_500_0.001_1000_2/)
+
 #### Multiscale model (microscale state dim = 5, visualized below): 5.8% error
 
 <div align="center">
@@ -102,6 +108,8 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
 </table>
 
 </div>
+
+If the above plots are not rendering, view them [here.](images/kdv_1d/20_5_500_0.001_1000_2/)
 
 ## 1D Burgers' Equation
 
@@ -141,6 +149,8 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
 
 </div>
 
+If the above plots are not rendering, view them [here.](images/burgers_1d/20_0_500_0.001_1000_3/)
+
 #### Multiscale model (microscale state dim = 5, visualized below): 1.1% error
 
 <div align="center">
@@ -171,3 +181,5 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
 </table>
 
 </div>
+
+If the above plots are not rendering, view them [here.](images/burgers_1d/20_5_500_0.001_1000_3/)

@@ -56,19 +56,19 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
       <sub>Time = 0.0</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_1_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_1_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.25" width="100%" /><br/>
       <sub>Time = 0.25</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_2_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_2_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.5" width="100%" /><br/>
       <sub>Time = 0.5</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_3_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_3_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.75" width="100%" /><br/>
       <sub>Time = 0.75</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 1.0" width="100%" /><br/>
       <sub>Time = 1.0</sub>
     </td>
   </tr>
@@ -89,19 +89,19 @@ If the above plots are not rendering, view them [here.](images/kdv_1d/20_0_500_0
       <sub>Time = 0.0</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_1_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_1_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.25" width="100%" /><br/>
       <sub>Time = 0.25</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_2_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_2_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.5" width="100%" /><br/>
       <sub>Time = 0.5</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_3_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_3_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.75" width="100%" /><br/>
       <sub>Time = 0.75</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Multiscale 1D KdV Model - Time = 1.0" width="100%" /><br/>
       <sub>Time = 1.0</sub>
     </td>
   </tr>
@@ -129,19 +129,19 @@ If the above plots are not rendering, view them [here.](images/kdv_1d/20_5_500_0
       <sub>Time = 0.0</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_1_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_1_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.25" width="100%" /><br/>
       <sub>Time = 0.25</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_2_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_2_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.5" width="100%" /><br/>
       <sub>Time = 0.5</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_3_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_3_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.75" width="100%" /><br/>
       <sub>Time = 0.75</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_4_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_0_500_0.001_1000_3/test_0_4_pred_vs_true.svg" alt="Closure 1D Burgers Model - Time = 1.0" width="100%" /><br/>
       <sub>Time = 1.0</sub>
     </td>
   </tr>
@@ -162,19 +162,19 @@ If the above plots are not rendering, view them [here.](images/burgers_1d/20_0_5
       <sub>Time = 0.0</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_1_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_1_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.25" width="100%" /><br/>
       <sub>Time = 0.25</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_2_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_2_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.5" width="100%" /><br/>
       <sub>Time = 0.5</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_3_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_3_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.75" width="100%" /><br/>
       <sub>Time = 0.75</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_4_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/burgers_1d/20_5_500_0.001_1000_3/test_0_4_pred_vs_true.svg" alt="Multiscale 1D Burgers Model - Time = 1.0" width="100%" /><br/>
       <sub>Time = 1.0</sub>
     </td>
   </tr>

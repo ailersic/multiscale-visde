@@ -64,7 +64,7 @@ Korteweg - de Vries equation multi-trajectory dataset. Trained for 500 epochs.
       <sub>Time = 0.75</sub>
     </td>
     <td align="center" width="20%">
-      <img src="./images/kdv_1d/20_5_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
+      <img src="./images/kdv_1d/20_0_500_0.001_1000_2/test_0_4_pred_vs_true.svg" alt="Closure 1D KdV Model - Time = 0.0" width="100%" /><br/>
       <sub>Time = 1.0</sub>
     </td>
   </tr>

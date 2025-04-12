@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "multiscale-visde"
 version = "0.1.0"
-description = "Hidden Variable VISDE"
+description = "Learning Stochastic Multiscale Models by Variational Inference"
 authors = ["Anonymous"]
 license = "GNUv3"
 readme = "README.md"

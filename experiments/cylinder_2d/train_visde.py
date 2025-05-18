@@ -13,7 +13,7 @@ from pytorch_lightning import loggers
 #from pytorch_lightning.callbacks import EarlyStopping
 
 import visde
-from experiments.cylinder_2d.def_model import create_latent_sde
+from experiments.cylinder_2d.def_model import create_latent_sde, augment_latent_sde_ninc, augment_latent_sde_n1
 
 torch.manual_seed(42)
 torch.backends.cudnn.benchmark=True
@@ -53,15 +53,32 @@ def get_dataloaders(n_win: int,
 
     return train_dataloader, val_dataloader
 
-def main(overwrite: bool = False, dim_z_macro: int = 2*32*8, dim_z_micro: int = 5, max_epochs: int = 2000, lr: float = 1e-3, lr_sched_freq: int = np.inf):
+def main(overwrite: bool = False,
+         dim_z_macro: int = 2*32*8,
+         dim_z_micro: int = 1,
+         max_epochs: int = 2000,
+         lr: float = 1e-4,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     n_win = 1
     n_batch = 128
     print(f"CUDA: {torch.cuda.is_available()}")
 
     train_dataloader, val_dataloader = get_dataloaders(n_win, n_batch)
-    model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
 
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), 'augment'])
+        if dim_z_micro == 1:
+            old_version = "512_0_2000_0.001_2000"
+            model = augment_latent_sde_n1(old_version, dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
+        else:
+            old_version = "_".join([str(dim_z_macro), str(dim_z_micro - 1), str(max_epochs), str(lr), str(lr_sched_freq), 'augment'])
+            model = augment_latent_sde_ninc(old_version, dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
+        model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
+    
     if os.path.exists(os.path.join(CURR_DIR, "logs_visde", version)):
         if overwrite:
             print(f"Version {version} already exists. Overwriting...", flush=True)
@@ -78,7 +95,7 @@ def main(overwrite: bool = False, dim_z_macro: int = 2*32*8, dim_z_micro: int = 
         log_every_n_steps=1,
         max_epochs=max_epochs,
         logger=tensorboard,
-        check_val_every_n_epoch=50,
+        check_val_every_n_epoch=25,
         #profiler=profiler,
         #callbacks=[EarlyStopping(monitor="val/norm_rmse", mode="min")]
     )

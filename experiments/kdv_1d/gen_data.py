@@ -62,10 +62,10 @@ def create_dataset(mu: Float[Tensor, "n_traj dim_mu"],
     f = torch.zeros(n_traj, n_tstep, dim_f)
     for i in range(n_traj):
         amp1 = 2.0 + 0.1 * torch.randn(1)
-        var = 1.0 + 0.1 * torch.randn(1)
+        s = 1.0 + 0.1 * torch.randn(1)
         #phase = torch.rand(1)
         #offset = 0.25 + 0.1 * torch.randn(1)
-        x[i, 0, :] = amp1*torch.cos(torch.pi*(x_domain))*torch.exp(-(x_domain - 7.5)**2/var)
+        x[i, 0, :] = amp1*torch.cos(torch.pi*(x_domain))*torch.exp(-(x_domain - 7.5)**2/(s**2))
         #amp*torch.exp(-(x_domain - 0.5)**2/var)
         f[i] = forcing(t[i, :], dim_f)
         plt.plot(x_domain.numpy(), x[i, 0, :].numpy())
@@ -86,7 +86,7 @@ def create_dataset(mu: Float[Tensor, "n_traj dim_mu"],
     return t, x, f
 
 def main():
-    n_traj = 10
+    n_traj = 20
     n_tstep = 1001
 
     dim_x = 1000
@@ -112,9 +112,9 @@ def main():
     #i_val = range(1001, 1251)
     #i_test = range(1251, 1501)
 
-    n_traj_train = 8
-    n_traj_val = 1
-    n_traj_test = 1
+    n_traj_train = 10
+    n_traj_val = 5
+    n_traj_test = 5
 
     train_mu, train_t, train_x, train_f = mu[:n_traj_train], t[:n_traj_train], x[:n_traj_train], f[:n_traj_train]
     val_mu, val_t, val_x, val_f = mu[n_traj_train:n_traj_train + n_traj_val], t[n_traj_train:n_traj_train + n_traj_val], x[n_traj_train:n_traj_train + n_traj_val], f[n_traj_train:n_traj_train + n_traj_val]
@@ -148,7 +148,7 @@ def main():
             "test_x": test_x,
             "test_f": test_f}
 
-    with open(os.path.join(CURR_DIR, "data.pkl"), "wb") as f:
+    with open(os.path.join(CURR_DIR, f"data_{n_traj_train}_{n_traj_val}_{n_traj_test}.pkl"), "wb") as f:
         pkl.dump(data, f)
 
 if __name__ == "__main__":

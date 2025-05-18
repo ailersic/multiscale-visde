@@ -14,10 +14,10 @@ from experiments.burgers_2d.def_model import create_latent_sde
 
 plt.rcParams.update({'font.size': 20})
 #plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
+#plt.rc('font', family='Garamond')
 
 CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
-DATA_FILE = "data.pkl"
+DATA_FILE = "data_20_5_5.pkl"
 TRAIN_VAL_TEST = "test"
 
 if torch.cuda.is_available():
@@ -25,7 +25,13 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-def main(dim_z_macro: int = 25, dim_z_micro: int = 1, max_epochs: int = 1000, lr: float = 5e-2, lr_sched_freq: int = 500):
+def main(dim_z_macro: int = 8*8,
+         dim_z_micro: int = 0,
+         max_epochs: int = 100,
+         lr: float = 1e-3,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     with open(os.path.join(CURR_DIR, DATA_FILE), "rb") as f:
         data = pkl.load(f)
     
@@ -54,7 +60,10 @@ def main(dim_z_macro: int = 25, dim_z_micro: int = 1, max_epochs: int = 1000, lr
     }
 
     dummy_model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), "augment"])
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
     ckpt_dir = os.path.join(CURR_DIR, "logs_visde", version, "checkpoints")
     out_dir = os.path.join(CURR_DIR, "postproc_visde", version)
 
@@ -100,12 +109,12 @@ def main(dim_z_macro: int = 25, dim_z_micro: int = 1, max_epochs: int = 1000, lr
 
     x_true = x[i_traj].cpu().detach().numpy()
 
-    x_min = -0.3#np.min(x_true[:, 0])
-    x_max = 0.9#np.max(x_true[:, 0])
-    cmap = 'nipy_spectral'
+    x_min = -0.22#np.min(x_true[:, 0])
+    x_max = 1.06#np.max(x_true[:, 0])
+    cmap = 'turbo'
 
     im1 = axgrid[0].imshow(x_true[0, 0], cmap=cmap, vmin=x_min, vmax=x_max)
-    fig.colorbar(im1, ax=axgrid[7], ticks=[-0.3, 0, 0.3, 0.6, 0.9], aspect=10, fraction=0.35)
+    fig.colorbar(im1, ax=axgrid[7], ticks=[-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0], aspect=10, fraction=0.35)
 
     def update(j):
         if j % 10 == 0:
@@ -120,13 +129,16 @@ def main(dim_z_macro: int = 25, dim_z_micro: int = 1, max_epochs: int = 1000, lr
         x_std = xs.std(dim=0).cpu().detach().numpy()
 
         x_macro = model.decoder.decode_mean.decode_macro(zs[j, :, :dim_z_macro]).mean(dim=0).unflatten(0, shape_x).cpu().detach().numpy()
-        if dim_z_micro > 0:
-            x_micro = model.decoder.decode_mean.decode_micro(zs[j, :, dim_z_macro:]).mean(dim=0).unflatten(0, shape_x).cpu().detach().numpy()
 
         im1 = axgrid[0].imshow(x_true[j, 0], cmap=cmap, vmin=x_min, vmax=x_max)
         im2 = axgrid[2].imshow(x_mean[0], cmap=cmap, vmin=x_min, vmax=x_max)
         im3 = axgrid[4].imshow(x_macro[0], cmap=cmap, vmin=x_min, vmax=x_max)
-        im4 = axgrid[6].imshow(x_micro[0], cmap=cmap, vmin=x_min, vmax=x_max)
+
+        if dim_z_micro > 0:
+            x_micro = model.decoder.decode_mean.decode_micro(zs[j, :, dim_z_macro:]).mean(dim=0).unflatten(0, shape_x).cpu().detach().numpy()
+            im4 = axgrid[6].imshow(x_micro[0], cmap=cmap, vmin=x_min, vmax=x_max)
+        else:
+            im4 = axgrid[6].annotate("N/A", xy=(0.5, 0.5), fontsize=20, ha="center", va="center")
 
         axgrid[1].text(-0.4, 0, r"$\approx$", fontsize=48, ha="center", va="center")
         axgrid[1].set_xlim(-1, 1)
@@ -148,7 +160,7 @@ def main(dim_z_macro: int = 25, dim_z_micro: int = 1, max_epochs: int = 1000, lr
         for i in [1, 3, 5, 7]:
             axgrid[i].axis("off")
 
-        axgrid[0].set_ylabel(f"t={t[i_traj, j]:.2f}")
+        #axgrid[0].set_ylabel(f"t={t[i_traj, j]:.2f}")
         axgrid[0].set_title("True Solution")
         axgrid[2].set_title("Prediction Mean")
         axgrid[4].set_title("Macroscale")

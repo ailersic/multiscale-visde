@@ -25,7 +25,13 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-def main(dim_z_macro: int = 2*32*8, dim_z_micro: int = 5, max_epochs: int = 1000, lr: float = 1e-3, lr_sched_freq: int = np.inf):
+def main(dim_z_macro: int = 2*32*8,
+         dim_z_micro: int = 0,
+         max_epochs: int = 2000,
+         lr: float = 1e-3,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     with open(os.path.join(CURR_DIR, DATA_FILE), "rb") as f:
         data = pkl.load(f)
     
@@ -45,7 +51,10 @@ def main(dim_z_macro: int = 2*32*8, dim_z_micro: int = 5, max_epochs: int = 1000
     n_tsteps = t.shape[1]
 
     dummy_model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), "augment"])
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq)])
     ckpt_dir = os.path.join(CURR_DIR, "logs_visde", version, "checkpoints")
     out_dir = os.path.join(CURR_DIR, "postproc_visde", version)
 

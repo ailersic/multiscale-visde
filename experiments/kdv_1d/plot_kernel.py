@@ -13,11 +13,11 @@ import visde
 from experiments.kdv_1d.def_model import create_latent_sde
 
 plt.rcParams.update({'font.size': 12})
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
+plt.rc('text', usetex=True)
+plt.rc('font', family='Garamond')
 
 CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
-DATA_FILE = "data.pkl"
+DATA_FILE = "data_10_5_5.pkl"
 TRAIN_VAL_TEST = "test"
 
 if torch.cuda.is_available():
@@ -25,7 +25,14 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epochs: int = 500, lr: float = 5e-4, lr_sched_freq: int = 100000):
+def main(dim_z_macro: int = 20,
+         dim_z_micro: int = 5,
+         n_sigma: int = 3,
+         max_epochs: int = 200,
+         lr: float = 1e-4,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     with open(os.path.join(CURR_DIR, DATA_FILE), "rb") as f:
         data = pkl.load(f)
     
@@ -56,7 +63,10 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
     }
 
     dummy_model = create_latent_sde(dim_z_macro, dim_z_micro, n_sigma, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma), "augment"])
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
     ckpt_dir = os.path.join(CURR_DIR, "logs_visde", version, "checkpoints")
     out_dir = os.path.join(CURR_DIR, "postproc_visde", version)
 
@@ -82,19 +92,23 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
 
     cmap = "coolwarm"
     kernel = model.encoder.encode_mean.macro_net[1].weight.squeeze().detach().cpu().numpy()
-    lim = max(abs(kernel.min()), abs(kernel.max()))
+    ulim = np.ceil(10*kernel.max())/10
+    llim = np.floor(10*kernel.min())/10
 
-    fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+    fig, ax = plt.subplots(1, 1, figsize=(4, 2))
     #print(kernel)
     ax.plot(kernel, color="black", lw=2)
-    ax.set_title("Macroscale kernel")
+    ax.set_ylim(llim, ulim)
+    ax.set_yticks(np.arange(llim, ulim+0.1, 0.1))
+    ax.set_xlabel("High-resolution mesh index")
+    #ax.set_title("Macroscale kernel")
     
     sigmas = np.arange(0, kernel.shape[0], sigma)
     ax.set_xticks(sigmas)
     ax.set_xticklabels([f"${i-kernel.shape[0]//2}$" for i in sigmas])
 
-    plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "kernel.pdf"))
+    fig.tight_layout()
+    fig.savefig(os.path.join(out_dir, "kernel.pdf"))
     print(os.path.join(out_dir, "kernel.pdf"))
     plt.close()
 

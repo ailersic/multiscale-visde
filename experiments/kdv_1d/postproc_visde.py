@@ -17,7 +17,7 @@ plt.rcParams.update({'font.size': 16})
 #plt.rc('font', family='serif')
 
 CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
-DATA_FILE = "data.pkl"
+DATA_FILE = "data_10_5_5.pkl"
 TRAIN_VAL_TEST = "test"
 
 if torch.cuda.is_available():
@@ -25,7 +25,14 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epochs: int = 500, lr: float = 1e-3, lr_sched_freq: int = 1000):
+def main(dim_z_macro: int = 20,
+         dim_z_micro: int = 5,
+         n_sigma: int = 3,
+         max_epochs: int = 200,
+         lr: float = 1e-4,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     with open(os.path.join(CURR_DIR, DATA_FILE), "rb") as f:
         data = pkl.load(f)
     
@@ -43,7 +50,7 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
     n_batch_decoder = 64
     n_tsteps = t.shape[1]
 
-    norm_rmse = np.zeros(n_traj)
+    norm_err = np.zeros((n_traj, n_tsteps))
 
     sde_options = {
         'method': 'srk',
@@ -54,7 +61,10 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
     }
 
     dummy_model = create_latent_sde(dim_z_macro, dim_z_micro, n_sigma, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma), "augment"])
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
     ckpt_dir = os.path.join(CURR_DIR, "logs_visde", version, "checkpoints")
     out_dir = os.path.join(CURR_DIR, "postproc_visde", version)
 
@@ -107,10 +117,7 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
 
         assert isinstance(zs, Tensor), "zs is expected to be a single tensor"
 
-        sqerr = np.zeros(n_tsteps)
-        norm_sqerr = np.zeros(n_tsteps)
-        aenc_sqerr = np.zeros(n_tsteps)
-        aenc_norm_sqerr = np.zeros(n_tsteps)
+        aenc_norm_err = np.zeros(n_tsteps)
 
         z_i = torch.zeros(n_tsteps, 1, dim_z).to(device)
 
@@ -123,29 +130,25 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
             x_mean = xs.mean(dim=0)
             x_err = x_mean - x[i_traj, j_t]
 
-            sqerr[j_t] = x_err.pow(2).sum().item()
-            norm_sqerr[j_t] = sqerr[j_t] / x[i_traj, j_t].pow(2).sum().item()
+            norm_err[i_traj, j_t] = np.sqrt(x_err.pow(2).sum().item() / x[i_traj, j_t].pow(2).sum().item())
 
             z_i[j_t], _ = model.encoder(mu_i, x[i_traj, j_t:(j_t+n_win)].unsqueeze(0))
             x_rec_ij, _ = model.decoder(mu_i, z_i[j_t])
             aenc_err = x_rec_ij - x[i_traj, j_t]
 
-            aenc_sqerr[j_t] = aenc_err.pow(2).sum().item()
-            aenc_norm_sqerr[j_t] = aenc_sqerr[j_t] / x[i_traj, j_t].pow(2).sum().item()
+            aenc_norm_err[j_t] = np.sqrt(aenc_err.pow(2).sum().item() / x[i_traj, j_t].pow(2).sum().item())
         print("done", flush=True)
-
-        norm_rmse[i_traj] = np.sqrt(np.mean(norm_sqerr))
         
-        print(f"Mean Normalized RMSE: {norm_rmse[i_traj]}", flush=True)
+        print(f"Mean error for trajectory {i_traj}: {np.mean(norm_err[i_traj])}", flush=True)
 
         figrmse, ax = plt.subplots(figsize=(12, 6))
         #ax.plot(rmse, label="RMSE")
-        ax.plot(np.sqrt(norm_sqerr), label="Normalized Rel. Error")
+        ax.plot(norm_err[i_traj], label="Error")
         #ax.plot(aenc_rmse, label="AEnc RMSE")
-        ax.plot(np.sqrt(aenc_norm_sqerr), label="AEnc Normalized Rel. Error")
+        ax.plot(aenc_norm_err, label="AEnc Error")
         ax.set_xlabel("Time step")
         ax.set_ylabel("Relative Error")
-        ax.set_title(f"Normalized RMSE: {norm_rmse[i_traj]:.3f}")
+        ax.set_title(f"Mean error: {np.mean(norm_err[i_traj]):.4f}")
         ax.legend()
         figrmse.savefig(os.path.join(out_dir, f"{TRAIN_VAL_TEST}_rmse_traj_{i_traj}.png"))
         figrmse.show()
@@ -206,7 +209,15 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
     fig.savefig(os.path.join(out_dir, f"{TRAIN_VAL_TEST}_pred_vs_true.pdf"), format='pdf')
     fig.show()
 
-    print(f"Normalized RMSE Mean: {np.mean(norm_rmse)}, Std Dev: {np.std(norm_rmse)}", flush=True)
+    print(f"Error Mean: {np.mean(norm_err.flatten())}, Std Dev: {np.std(norm_err.flatten())}", flush=True)
+
+    np.set_printoptions(threshold=np.inf)
+    with open(os.path.join(out_dir, "error.txt"), "w") as f:
+        f.write(np.array2string(norm_err, precision=5))
+        f.write("\n")
+        f.write(f"Mean: {np.mean(norm_err.flatten()):.5f}, Std Dev: {np.std(norm_err.flatten()):.5f}\n")
+    
+    print("All done!", flush=True)
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,8 @@
 from experiments.kdv_1d.train_visde import main as train_visde_main
 from experiments.kdv_1d.postproc_visde import main as postproc_visde_main
 from experiments.kdv_1d.plot_kernel import main as plot_kernel_main
-#from experiments.kdv_1d.multiscale_plot import main as multiscale_plot_main
+from experiments.kdv_1d.comparison_plot import main as comparison_plot_main
+from experiments.kdv_1d.multiscale_plot import main as multiscale_plot_main
 
 import json
 import pathlib
@@ -12,11 +13,30 @@ CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
 
 if __name__ == "__main__":
     arg_str = " ".join(sys.argv[1:])
-    json_str = arg_str.replace("{", '{"').replace(": ", '": ').replace(", ", ', "')
-    hparams = json.loads(json_str)
-    print(hparams)
+    if len(arg_str) != 0:
+        json_str = arg_str.replace("{", '{"').replace(": ", '": ').replace(", ", ', "')
+        hparams = json.loads(json_str)
+    else:
+        hparams = {
+            "dim_z_macro": 20,
+            "dim_z_micro": 0,
+            "max_epochs": 400,
+            "lr": 1e-3,
+            "lr_sched_freq": 2000,
+            "n_sigma": 3,
+            "augment": True,
+        }
 
-    train_visde_main(**hparams, overwrite=OVERWRITE)
-    plot_kernel_main(**hparams)
-    postproc_visde_main(**hparams)
-    #multiscale_plot_main(**hparams)
+    for dim_z_micro in range(0, 6):
+        hparams["dim_z_micro"] = dim_z_micro
+        if dim_z_micro > 0:
+            hparams["lr"] = 1e-4
+        print(hparams)
+
+        train_visde_main(**hparams, overwrite=OVERWRITE)
+        plot_kernel_main(**hparams)
+        postproc_visde_main(**hparams)
+        if dim_z_micro == 0 or dim_z_micro == 5:
+            comparison_plot_main(**hparams)
+        if dim_z_micro == 5:
+            multiscale_plot_main(**hparams)

@@ -1,16 +1,11 @@
-from calendar import c
-from sympy import Float
+from jaxtyping import Float
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset
-from jaxtyping import Float
 import pickle as pkl
 import os
 import pathlib
 import matplotlib.pyplot as plt
-import numpy as np
-
-import visde
+# ruff: noqa: F821, F722
 
 CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
 
@@ -64,18 +59,20 @@ def create_dataset(mu: Float[Tensor, "n_traj dim_mu"],
     return t, x, f
 
 def main():
-    n_traj = 18
+    n_traj_train = 20
+    n_traj_val = 5
+    n_traj_test = 5
     n_tstep = 1001
     dim_x = 128
 
     train_T = 1.0
-    train_mu = torch.cat([torch.linspace(0.005, 0.005, n_traj).unsqueeze(1),], dim=1)
+    train_mu = torch.cat([torch.linspace(0.005, 0.005, n_traj_train).unsqueeze(1),], dim=1)
 
     val_T = 1.0
-    val_mu = torch.cat([torch.full([1, 1], 0.005)], dim=1)
+    val_mu = torch.cat([torch.linspace(0.005, 0.005, n_traj_val).unsqueeze(1)], dim=1)
     
     test_T = 1.0
-    test_mu = torch.cat([torch.full([1, 1], 0.005)], dim=1)
+    test_mu = torch.cat([torch.linspace(0.005, 0.005, n_traj_test).unsqueeze(1)], dim=1)
 
     train_t, train_x, train_f = create_dataset(train_mu, train_T, n_tstep, dim_x)
     val_t, val_x, val_f = create_dataset(val_mu, val_T, n_tstep, dim_x)
@@ -89,20 +86,20 @@ def main():
     val_x = val_x.unsqueeze(2)
     test_x = test_x.unsqueeze(2)
 
-    assert train_mu.shape == (n_traj, 1)
-    assert train_t.shape == (n_traj, n_tstep)
-    assert train_x.shape == (n_traj, n_tstep, 1, dim_x, dim_x)
-    assert train_f.shape == (n_traj, n_tstep, 1)
+    assert train_mu.shape == (n_traj_train, 1)
+    assert train_t.shape == (n_traj_train, n_tstep)
+    assert train_x.shape == (n_traj_train, n_tstep, 1, dim_x, dim_x)
+    assert train_f.shape == (n_traj_train, n_tstep, 1)
 
-    assert val_mu.shape == (1, 1)
-    assert val_t.shape == (1, n_tstep)
-    assert val_x.shape == (1, n_tstep, 1, dim_x, dim_x)
-    assert val_f.shape == (1, n_tstep, 1)
+    assert val_mu.shape == (n_traj_val, 1)
+    assert val_t.shape == (n_traj_val, n_tstep)
+    assert val_x.shape == (n_traj_val, n_tstep, 1, dim_x, dim_x)
+    assert val_f.shape == (n_traj_val, n_tstep, 1)
     
-    assert test_mu.shape == (1, 1)
-    assert test_t.shape == (1, n_tstep)
-    assert test_x.shape == (1, n_tstep, 1, dim_x, dim_x)
-    assert test_f.shape == (1, n_tstep, 1)
+    assert test_mu.shape == (n_traj_val, 1)
+    assert test_t.shape == (n_traj_val, n_tstep)
+    assert test_x.shape == (n_traj_val, n_tstep, 1, dim_x, dim_x)
+    assert test_f.shape == (n_traj_val, n_tstep, 1)
 
     fig, axs = plt.subplots(3, 3)
     axs[0,0].imshow(train_x[0, 0, 0], cmap="hot", vmin=0, vmax=1)
@@ -133,7 +130,7 @@ def main():
             "test_x": test_x,
             "test_f": test_f}
 
-    with open(os.path.join(CURR_DIR, "data.pkl"), "wb") as f:
+    with open(os.path.join(CURR_DIR, f"data_{n_traj_train}_{n_traj_val}_{n_traj_test}.pkl"), "wb") as f:
         pkl.dump(data, f)
 
 if __name__ == "__main__":

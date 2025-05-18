@@ -1,23 +1,24 @@
 import torch
-from torch import Tensor
-import torchsde
 
 import os
 import pickle as pkl
 import pathlib
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import AxesGrid
 import numpy as np
 
 import visde
 from experiments.kdv_1d.def_model import create_latent_sde
 
-plt.rcParams.update({'font.size': 16})
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
+plt.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    "text.latex.preamble": r"\usepackage{amsmath}",
+    "text.usetex": True,
+    "font.family": "Garamond",
+    "font.size": 16
+})
 
 CURR_DIR = str(pathlib.Path(__file__).parent.absolute())
-DATA_FILE = "data.pkl"
+DATA_FILE = "data_10_5_5.pkl"
 TRAIN_VAL_TEST = "test"
 
 if torch.cuda.is_available():
@@ -25,7 +26,14 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epochs: int = 500, lr: float = 5e-4, lr_sched_freq: int = 100000):
+def main(dim_z_macro: int = 20,
+         dim_z_micro: int = 5,
+         n_sigma: int = 3,
+         max_epochs: int = 200,
+         lr: float = 1e-4,
+         lr_sched_freq: int = 2000,
+         augment: bool = True,
+) -> None:
     with open(os.path.join(CURR_DIR, DATA_FILE), "rb") as f:
         data = pkl.load(f)
     
@@ -34,26 +42,17 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
     x = data[f"{TRAIN_VAL_TEST}_x"].to(device)
     f = data[f"{TRAIN_VAL_TEST}_f"].to(device)
 
-    dim_z = dim_z_macro + dim_z_micro
     dim_x = x.shape[-1]
 
-    n_traj = mu.shape[0]
     n_win = 1
     n_batch = 64
     n_tsteps = t.shape[1]
 
-    norm_rmse = np.zeros(n_traj)
-
-    sde_options = {
-        'method': 'srk',
-        'dt': 1e-2,
-        'adaptive': True,
-        'rtol': 1e-4,
-        'atol': 1e-6
-    }
-
     dummy_model = create_latent_sde(dim_z_macro, dim_z_micro, n_sigma, n_batch, n_win, lr, lr_sched_freq, DATA_FILE, device)
-    version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
+    if augment and dim_z_micro > 0:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma), "augment"])
+    else:
+        version = "_".join([str(dim_z_macro), str(dim_z_micro), str(max_epochs), str(lr), str(lr_sched_freq), str(n_sigma)])
     ckpt_dir = os.path.join(CURR_DIR, "logs_visde", version, "checkpoints")
     out_dir = os.path.join(CURR_DIR, "msplot_visde", version)
 
@@ -84,9 +83,9 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
 
     for tsample in tsamples:
         mu_i = mu[i_traj].unsqueeze(0)
-        t_i = t[i_traj]
+        #t_i = t[i_traj]
         x0_i = x[i_traj, tsample:(tsample + n_win), :].unsqueeze(0)
-        f_i = f[i_traj]
+        #f_i = f[i_traj]
 
         z0_i, _ = model.encoder(mu_i, x0_i)
         xr_i, _ = model.decoder(mu_i, z0_i)
@@ -97,21 +96,21 @@ def main(dim_z_macro: int = 20, dim_z_micro: int = 5, n_sigma: int = 2, max_epoc
         freq_domain = np.fft.rfftfreq(dim_x, d=1/dim_x)
         zfreq_domain = np.fft.rfftfreq(dim_z_macro, d=1/dim_z_macro)
         nyqz = np.max(zfreq_domain)
-        ax.title.set_text(f"Spectral decomposition at t={t_i[tsample]:.2f}")
+        #ax.title.set_text(f'Spectral decomposition at t={t_i[tsample]:.2f}')
         ax.add_line(plt.Line2D([nyqz, nyqz], [-1e6, 1e6], color='black', linewidth=2, linestyle='--'))
         ax.annotate('Macroscale\nNyquist Freq.', xy=(nyqz, 2e-3), ha='center', va='bottom', bbox=dict(facecolor='white', edgecolor='white', boxstyle='round,pad=0.2'))
-        ax.plot(freq_domain, torch.abs(torch.fft.rfft(x0_i[0, 0, :])).cpu().detach().numpy(), linewidth=4, label="True", color='black')
-        ax.plot(freq_domain, torch.abs(torch.fft.rfft(x_smooth[0, :])).cpu().detach().numpy(), linewidth=4, label="Macro", color='blue')
-        ax.plot(freq_domain, torch.abs(torch.fft.rfft(x_resid[0, :])).cpu().detach().numpy(), linewidth=4, label="Micro", color='red')
+        ax.plot(freq_domain, torch.abs(torch.fft.rfft(x0_i[0, 0, :])).cpu().detach().numpy(), linewidth=4, label=r"Observation", color='black')
+        ax.plot(freq_domain, torch.abs(torch.fft.rfft(x_smooth[0, :])).cpu().detach().numpy(), linewidth=4, label=r"Prolonged Macro", color='blue', linestyle='-.')
+        ax.plot(freq_domain, torch.abs(torch.fft.rfft(xr_i[0, :])).cpu().detach().numpy(), linewidth=4, label=r"Multiscale", color='red', linestyle='--')
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim([1e-3, 1000])
         ax.set_xlim([1, 100])
-        ax.set_xlabel("Frequency")
-        ax.set_ylabel("Magnitude")
+        ax.set_xlabel(r"Frequency")
+        ax.set_ylabel(r"Magnitude")
         ax.legend()
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_dir, f"trajectory_{i_traj}_tsample_{tsample}_spectrum.pdf"))
+        fig.tight_layout()
+        fig.savefig(os.path.join(out_dir, f"trajectory_{i_traj}_tsample_{tsample}_spectrum.pdf"), format='pdf')
         plt.close()
 
         fig, ax = plt.subplots(figsize=(5, 3))

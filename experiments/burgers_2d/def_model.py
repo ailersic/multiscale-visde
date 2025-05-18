@@ -211,7 +211,7 @@ class DriftNet(nn.Module):
         self.n_chan = 1
         #grid_x = int(np.sqrt(dim_x//n_chan))
         grid_z = int(np.sqrt(dim_z_macro//self.n_chan))
-        dim_z_macro_activ = dim_z_micro
+        dim_z_macro_activ = self.dim_z_micro
 
         _adj = torch.zeros((grid_z, grid_z, grid_z, grid_z)).to(torch.bool)
         for i in range(grid_z):
@@ -231,27 +231,28 @@ class DriftNet(nn.Module):
                                         nn.ReLU(),
                                         nn.Linear(128, self.n_chan))
         self.macro_vmap = torch.vmap(self.macro_drift, in_dims=2, out_dims=2)
-
-        self.micro_net = nn.Sequential(nn.Linear(dim_z_macro_activ + self.dim_z_micro + 2, 512),
-                                        nn.ReLU(),
-                                        nn.Linear(512, 256),
-                                        nn.ReLU(),
-                                        nn.Linear(256, 128),
-                                        nn.ReLU(),
-                                        nn.Linear(128, self.dim_z_micro))
-
-        self.micro_activ = nn.Identity()
-        self.macro_activ = nn.Linear(self.dim_z_macro, dim_z_macro_activ)
         
         for layer in self.macro_net:
             if isinstance(layer, nn.Linear) or isinstance(layer, nn.Conv2d):
                 nn.init.xavier_normal_(layer.weight)
                 nn.init.zeros_(layer.bias)
+
+        if self.dim_z_micro > 0:
+            self.micro_net = nn.Sequential(nn.Linear(dim_z_macro_activ + self.dim_z_micro + 2, 512),
+                                            nn.ReLU(),
+                                            nn.Linear(512, 256),
+                                            nn.ReLU(),
+                                            nn.Linear(256, 128),
+                                            nn.ReLU(),
+                                            nn.Linear(128, self.dim_z_micro))
+
+            self.micro_activ = nn.Identity()
+            self.macro_activ = nn.Linear(self.dim_z_macro, dim_z_macro_activ)
         
-        for layer in self.micro_net:
-            if isinstance(layer, nn.Linear) or isinstance(layer, nn.Conv2d):
-                nn.init.xavier_normal_(layer.weight)
-                nn.init.zeros_(layer.bias)
+            for layer in self.micro_net:
+                if isinstance(layer, nn.Linear) or isinstance(layer, nn.Conv2d):
+                    nn.init.xavier_normal_(layer.weight)
+                    nn.init.zeros_(layer.bias)
 
     def macro_drift(self,
                     z_macro_adj: Float[Tensor, "n_batch n_chan dim_z_macro"],
@@ -272,12 +273,19 @@ class DriftNet(nn.Module):
 
         dim_z_grid = self.dim_z_macro//self.n_chan
         z_macro_reshaped = z_macro.reshape(n_batch, self.n_chan, dim_z_grid)[:, :, self.adj]
-        z_micro_reshaped = self.micro_activ(z_micro).unsqueeze(2).expand(-1, -1, dim_z_grid)
 
-        dzdt_macro = self.macro_vmap(z_macro_reshaped, z_micro_reshaped).flatten(1)
-        dzdt_micro = self.micro_net(torch.cat([z_micro, self.macro_activ(z_macro), torch.sin(t), torch.cos(t)], dim=-1))
+        if self.dim_z_micro > 0:
+            z_micro_reshaped = self.micro_activ(z_micro).unsqueeze(2).expand(-1, -1, dim_z_grid)
 
-        return torch.cat([dzdt_macro, dzdt_micro], dim=-1)
+            dzdt_macro = self.macro_vmap(z_macro_reshaped, z_micro_reshaped).flatten(1)
+            dzdt_micro = self.micro_net(torch.cat([torch.sin(t), torch.cos(t), torch.stack([self.macro_activ(z_macro), z_micro], dim=2).flatten(1)], dim=1)) # interleave z_micro and activ(z_macro)
+
+            dzdt = torch.cat([dzdt_macro, dzdt_micro], dim=-1)
+        else:
+            z_micro_reshaped = torch.zeros(n_batch, self.dim_z_micro, dim_z_grid, device=z.device)
+            dzdt = self.macro_vmap(z_macro_reshaped, z_micro_reshaped).flatten(1)
+
+        return dzdt
 
 class DispNet(nn.Module):
     def __init__(self, config, dim_z_macro, dim_z_micro):
@@ -302,6 +310,176 @@ class KernelNet(nn.Module):
     
     def forward(self, t: Tensor) -> Tensor:
         return self.net(t)
+
+def augment_latent_sde_n1(old_version: str,
+                         dim_z_macro: int,
+                         dim_z_micro: int,
+                         n_batch: int,
+                         n_win: int,
+                         lr: float,
+                         lr_sched_freq: int,
+                         data_file: str,
+                         device: torch.device = torch.device("cuda:0")
+) -> visde.sde.LatentSDE:
+    old_dummy_model = create_latent_sde(dim_z_macro, dim_z_micro - 1, n_batch, n_win, lr, lr_sched_freq, data_file, device)
+    ckpt_dir = os.path.join(CURR_DIR, "logs_visde", old_version, "checkpoints")
+    for file in os.listdir(ckpt_dir):
+        if file.endswith(".ckpt"):
+            ckpt_file = file
+    
+    old_model = visde.LatentSDE.load_from_checkpoint(os.path.join(ckpt_dir, ckpt_file),
+                                                    config=old_dummy_model.config,
+                                                    encoder=old_dummy_model.encoder,
+                                                    decoder=old_dummy_model.decoder,
+                                                    drift=old_dummy_model.drift,
+                                                    dispersion=old_dummy_model.dispersion,
+                                                    loglikelihood=old_dummy_model.loglikelihood,
+                                                    latentvar=old_dummy_model.latentvar).to(device)
+    
+    # copy all parameters with augmented dim_z_micro
+    dim_z = dim_z_macro + dim_z_micro
+
+    new_model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, data_file, device)
+
+    with torch.no_grad():
+        state_dict = old_model.state_dict()
+
+        # encoder var
+        new_var = -4*torch.ones((1, dim_z))
+        new_var[:, :dim_z-1] = state_dict["encoder.encode_var.fixed_var"]
+        state_dict["encoder.encode_var.fixed_var"] = new_var
+
+        # drift
+        new_weight = torch.zeros((128, old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro))
+        new_weight[:, :old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro-1] = state_dict["drift.net.macro_net.0.weight"]
+        torch.nn.init.xavier_normal_(new_weight[:, old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro-1:])
+        state_dict["drift.net.macro_net.0.weight"] = new_weight
+
+        # dispersion
+        new_disp = torch.ones((1, dim_z))
+        new_disp[:, :dim_z-1] = state_dict["dispersion.net.fixed_disp"]
+        torch.nn.init.xavier_normal_(new_disp[:, dim_z-1:])
+        state_dict["dispersion.net.fixed_disp"] = new_disp
+
+        # latentvar
+        new_var = -4*torch.ones((1, dim_z))
+        new_var[:, :dim_z-1] = state_dict["latentvar.encoder.encode_var.fixed_var"]
+        state_dict["latentvar.encoder.encode_var.fixed_var"] = new_var
+
+        new_model.load_state_dict(state_dict, strict=False)
+    
+    return new_model
+
+def augment_latent_sde_ninc(old_version: str,
+                            dim_z_macro: int,
+                            dim_z_micro: int,
+                            n_batch: int,
+                            n_win: int,
+                            lr: float,
+                            lr_sched_freq: int,
+                            data_file: str,
+                            device: torch.device = torch.device("cuda:0")
+) -> visde.sde.LatentSDE:
+    old_dummy_model = create_latent_sde(dim_z_macro, dim_z_micro - 1, n_batch, n_win, lr, lr_sched_freq, data_file, device)
+    ckpt_dir = os.path.join(CURR_DIR, "logs_visde", old_version, "checkpoints")
+    for file in os.listdir(ckpt_dir):
+        if file.endswith(".ckpt"):
+            ckpt_file = file
+    
+    old_model = visde.LatentSDE.load_from_checkpoint(os.path.join(ckpt_dir, ckpt_file),
+                                                    config=old_dummy_model.config,
+                                                    encoder=old_dummy_model.encoder,
+                                                    decoder=old_dummy_model.decoder,
+                                                    drift=old_dummy_model.drift,
+                                                    dispersion=old_dummy_model.dispersion,
+                                                    loglikelihood=old_dummy_model.loglikelihood,
+                                                    latentvar=old_dummy_model.latentvar).to(device)
+    
+    # copy all parameters with augmented dim_z_micro
+    dim_z = dim_z_macro + dim_z_micro
+
+    new_model = create_latent_sde(dim_z_macro, dim_z_micro, n_batch, n_win, lr, lr_sched_freq, data_file, device)
+
+    with torch.no_grad():
+        state_dict = old_model.state_dict()
+
+        # encoder mean
+        new_weight = torch.zeros((dim_z_micro, old_model.encoder.encode_mean.micro_net[-1].in_features))
+        new_weight[:dim_z_micro-1] = state_dict["encoder.encode_mean.micro_net.8.weight"]
+        torch.nn.init.xavier_normal_(new_weight[dim_z_micro-1:])
+        state_dict["encoder.encode_mean.micro_net.8.weight"] = new_weight
+
+        new_bias = torch.zeros((dim_z_micro,))
+        new_bias[:dim_z_micro-1] = state_dict["encoder.encode_mean.micro_net.8.bias"]
+        torch.nn.init.zeros_(new_bias[dim_z_micro-1:])
+        state_dict["encoder.encode_mean.micro_net.8.bias"] = new_bias
+
+        # decoder mean
+        new_weight = torch.zeros((old_model.decoder.decode_mean.micro_net[0].out_features, dim_z_micro))
+        new_weight[:, :dim_z_micro-1] = state_dict["decoder.decode_mean.micro_net.0.weight"]
+        torch.nn.init.xavier_normal_(new_weight[:, dim_z_micro-1:])
+        state_dict["decoder.decode_mean.micro_net.0.weight"] = new_weight
+
+        # encoder var
+        new_var = -4*torch.ones((1, dim_z))
+        new_var[:, :dim_z-1] = state_dict["encoder.encode_var.fixed_var"]
+        state_dict["encoder.encode_var.fixed_var"] = new_var
+
+        # drift
+        new_weight = torch.zeros((128, old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro))
+        new_weight[:, :old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro-1] = state_dict["drift.net.macro_net.0.weight"]
+        torch.nn.init.xavier_normal_(new_weight[:, old_model.drift.net.n_chan*(2*old_model.drift.net.r + 1)**2 + dim_z_micro-1:])
+        state_dict["drift.net.macro_net.0.weight"] = new_weight
+        
+        new_weight = torch.zeros((old_model.drift.net.micro_net[0].out_features, 2*dim_z_micro+2))
+        new_weight[:, :2*dim_z_micro] = state_dict["drift.net.micro_net.0.weight"]
+        torch.nn.init.xavier_normal_(new_weight[:, 2*dim_z_micro:])
+        state_dict["drift.net.micro_net.0.weight"] = new_weight
+
+        new_weight = torch.zeros((dim_z_micro, old_model.drift.net.micro_net[-1].in_features))
+        new_weight[:dim_z_micro-1] = state_dict["drift.net.micro_net.6.weight"]
+        torch.nn.init.xavier_normal_(new_weight[dim_z_micro-1:])
+        state_dict["drift.net.micro_net.6.weight"] = new_weight
+
+        new_bias = torch.zeros((dim_z_micro,))
+        new_bias[:dim_z_micro-1] = state_dict["drift.net.micro_net.6.bias"]
+        torch.nn.init.zeros_(new_bias[dim_z_micro-1:])
+        state_dict["drift.net.micro_net.6.bias"] = new_bias
+
+        new_weight = torch.zeros((dim_z_micro, dim_z_macro))
+        new_weight[:dim_z_micro-1] = state_dict["drift.net.macro_activ.weight"]
+        torch.nn.init.xavier_normal_(new_weight[dim_z_micro-1:])
+        state_dict["drift.net.macro_activ.weight"] = new_weight
+
+        new_bias = torch.zeros((dim_z_micro,))
+        new_bias[:dim_z_micro-1] = state_dict["drift.net.macro_activ.bias"]
+        torch.nn.init.zeros_(new_bias[dim_z_micro-1:])
+        state_dict["drift.net.macro_activ.bias"] = new_bias
+
+        # dispersion
+        new_disp = torch.ones((1, dim_z))
+        new_disp[:, :dim_z-1] = state_dict["dispersion.net.fixed_disp"]
+        torch.nn.init.xavier_normal_(new_disp[:, dim_z-1:])
+        state_dict["dispersion.net.fixed_disp"] = new_disp
+
+        # latentvar
+        new_weight = torch.zeros((dim_z_micro, old_model.latentvar.encoder.encode_mean.micro_net[-1].in_features))
+        new_weight[:dim_z_micro-1] = state_dict["latentvar.encoder.encode_mean.micro_net.8.weight"]
+        torch.nn.init.xavier_normal_(new_weight[dim_z_micro-1:])
+        state_dict["latentvar.encoder.encode_mean.micro_net.8.weight"] = new_weight
+
+        new_bias = torch.zeros((dim_z_micro,))
+        new_bias[:dim_z_micro-1] = state_dict["latentvar.encoder.encode_mean.micro_net.8.bias"]
+        torch.nn.init.zeros_(new_bias[dim_z_micro-1:])
+        state_dict["latentvar.encoder.encode_mean.micro_net.8.bias"] = new_bias
+
+        new_var = -4*torch.ones((1, dim_z))
+        new_var[:, :dim_z-1] = state_dict["latentvar.encoder.encode_var.fixed_var"]
+        state_dict["latentvar.encoder.encode_var.fixed_var"] = new_var
+
+        new_model.load_state_dict(state_dict, strict=False)
+    
+    return new_model
 
 def create_latent_sde(dim_z_macro: int,
                       dim_z_micro: int,
@@ -370,7 +548,7 @@ def create_latent_sde(dim_z_macro: int,
 
     config = visde.LatentSDEConfig(n_totaldata=torch.numel(data["train_t"]),
                                    n_samples=1,
-                                   n_tquad=10,
+                                   n_tquad=0,
                                    n_warmup=0,
                                    n_transition=1000,
                                    lr=lr,

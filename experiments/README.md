@@ -1,0 +1,5 @@
+## Running experiments
+
+All test cases were trained with Adam. For each, we begin by training an implicit-scale model with an initial learning rate of $10^{-3}$. We decay the learning rate by 10% every 2000 optimization steps. We then initialize the multiscale model with $n_\eta = 1$ using trained parameters from the implicit-scale model; we apply Xavier normal initialization to all new parameters. We train it with an initial learning rate of $10^{-4}$. This process is repeated for larger $n_\eta$.
+
+Implicit-scale and multiscale models are assessed with the normalized error metric $\epsilon(t_i) = \|y_i - \hat{y}(t_i)\|/\|y_i\|$, where $y_i$ is the observation at time $t_i$ and $\hat{y}(t_i)$ is the mean prediction. For each experiment, we report the mean $\pm$ standard deviation of $\epsilon$ samples on the test set.

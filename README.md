@@ -48,7 +48,7 @@ This explicit scale separation allows our model not only to learn the complex in
 
 Each experiment folder contains detailed READMEs with setup instructions, visualizations, and results for the 1d KdV equation, 2D Burgers equation, and the 2D cylinder flow problem.
 
-Our multiscale modeling codebase builds upon the [Variational Inference for Stochastic Differential Equations (VISDE)](https://github.com/ailersic/visde.git) PyTorch library.
+Our multiscale modeling codebase uses the core inference engine from the [Variational Inference for Stochastic Differential Equations (VISDE)](https://github.com/ailersic/visde.git) PyTorch library.
 
 ## Quick Start
 

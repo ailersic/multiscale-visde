@@ -61,9 +61,12 @@ poetry run python experiments/kdv_1d/run_visde.py
 
 ## Citation 
 ```bibtex
-@article{ilersich2024multiscale,
+@article{ilersich2025multiscale,
   title={Learning Stochastic Multiscale Models},
   author={Ilersich, Andrew F. and Nair, Prasanth B.},
   journal={arXiv preprint},
-  year={2024}
+  year={2025},
+  eprint={2506.22655},
+  primaryClass={cs.LG},
+  url={https://arxiv.org/abs/2506.22655}, 
 }

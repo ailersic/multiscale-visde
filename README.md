@@ -2,7 +2,7 @@
 
 ### [Preprint](https://arxiv.org/abs/2506.22655) 
 
-[Andrew F. Ilersich](https://github.com/ailersic), 
+[Andrew F. Ilersich](https://ailersic.github.io/), 
 [Prasanth B. Nair](http://arrow.utias.utoronto.ca/~pbn)<br>
 University of Toronto Institute for Aerospace Studies
 
@@ -40,9 +40,9 @@ This explicit scale separation allows our model not only to learn the complex in
 
 ## Repository Structure 
 
-`experiments/` Training scripts and results for all test cases
+`experiments/` Training scripts and results for all multiscale test cases
 
-`visde/` Core multiscale modeling framework
+`visde/` Core variational inference framework
 
 `pyproject.toml`: Dependencies managed with Poetry
 
@@ -53,9 +53,10 @@ Our multiscale modeling codebase builds upon the [Variational Inference for Stoc
 ## Quick Start
 
 ```bash
+cd ~/path/to/multiscale-visde
+export PYTHONPATH=$PYTHONPATH:$(pwd)
 poetry install
-cd experiments/kdv_1d
-python train.py
+poetry run python experiments/kdv_1d/run_visde.py
 ```
 
 ## Citation 

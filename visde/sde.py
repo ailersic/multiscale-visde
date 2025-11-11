@@ -9,12 +9,15 @@ from torchsde import sdeint
 from jaxtyping import Float, jaxtyped
 from beartype import beartype
 from typing import Union
+from matplotlib import pyplot as plt
 
 from .autoencoder import VarEncoder, VarDecoder
 from .sdeprior import LatentDrift, LatentDispersion
 from .likelihood import LogLike
 from .sdevar import LatentVar, AmortizedLatentVar
 from .utils import linterp
+
+#from matplotlib import pyplot as plt
 # ruff: noqa: F821, F722
 
 #from torch.profiler import profile, record_function, ProfilerActivity
@@ -183,6 +186,43 @@ class LatentSDE(pl.LightningModule):
         # form latent distribution over window
         if isinstance(self.latentvar, AmortizedLatentVar):
             self.latentvar.form_window(mu, t, x_win)
+        
+        '''
+        fig, ax = plt.subplots(nrows=2, ncols=2)
+
+        n_tquad = t.shape[0]
+        z_enc, _ = self.encoder(mu, x_win)
+
+        z_mean, _, zdot_mean, _ = self.latentvar(mu, t)
+
+        #t_dense = torch.linspace(t[0, 0], t[-1, 0], 10*n_tquad, device=self.device).unsqueeze(-1)
+        #mu_dense = linterp(mu, t.flatten(), t_dense.flatten())
+        #z_mean_dense, _, _, _ = self.latentvar(mu_dense, t_dense)
+
+        ax[0, 0].plot(t[:, 0].cpu().detach().numpy(), z_enc[:, 0].cpu().detach().numpy(), label='encoded')
+        ax[0, 0].plot(t[:, 0].cpu().detach().numpy(), z_mean[:, 0].cpu().detach().numpy(), label='latentvar')
+        ax[0, 0].set_title("z0")
+        #ax[0].plot(t_dense[:, 0].cpu().detach().numpy(), z_mean_dense[:, 0].cpu().detach().numpy(), label='dense interp')
+
+        ax[1, 0].plot(t[:, 0].cpu().detach().numpy(), zdot_mean[:, 0].cpu().detach().numpy(), label='latentvar')
+        ax[1, 0].set_title("zdot0")
+        
+        ax[0, 1].plot(t[:, 0].cpu().detach().numpy(), z_enc[:, -1].cpu().detach().numpy(), label='encoded')
+        ax[0, 1].plot(t[:, 0].cpu().detach().numpy(), z_mean[:, -1].cpu().detach().numpy(), label='latentvar')
+        ax[0, 1].set_title("z-1")
+        #ax[1].plot(t_dense[:, 0].cpu().detach().numpy(), z_mean_dense[:, -1].cpu().detach().numpy(), label='dense interp')
+        
+        ax[1, 1].plot(t[:, 0].cpu().detach().numpy(), zdot_mean[:, -1].cpu().detach().numpy(), label='latentvar')
+        ax[1, 1].set_title("zdot-1")
+
+        ax[0, 0].legend()
+        ax[0, 1].legend()
+        ax[1, 0].legend()
+        ax[1, 1].legend()
+        fig.show()
+        fig.savefig('latentvar.png')
+        plt.close(fig)
+        '''
 
         # log-likelihood
         log_like = self._log_likelihood(mu, t, x)
@@ -274,7 +314,12 @@ class LatentSDE(pl.LightningModule):
         # compute error over minibatch
         temp_sde = SDE(self.drift, self.dispersion, mu[0:1], t, f)
         z_enc_mean, _ = self.encoder(mu, x_win)
-        z_int = sdeint(temp_sde, z_enc_mean[0:1], t, method="euler").squeeze(1)
+        try:
+            z_int = sdeint(temp_sde, z_enc_mean[0:1], t, method="euler", dt=(t[-1, 0] - t[0, 0])/100).squeeze(1)
+        except Exception as e:
+            print(f"Error during SDE integration: {e}")
+            z_int = torch.zeros_like(z_enc_mean)
+
         x_dec_mean, _ = self.decoder(mu, z_int)
 
         x_err = (x_dec_mean - x).pow(2).flatten(1).sum(1)

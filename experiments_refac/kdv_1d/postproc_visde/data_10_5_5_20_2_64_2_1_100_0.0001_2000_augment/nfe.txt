@@ -1,0 +1,2 @@
+Total NFE: 21246
+Avg NFE per traj: 4249.2

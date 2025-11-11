@@ -5,12 +5,12 @@ PyTorch Lightning package for learning stochastic differential equations by vari
 """
 
 __version__ = "0.1.0"
-__author__ = "Anonymous"
+__author__ = "Andrew Francesco Ilersich, Kevin Course, Prasanth B. Nair"
 
 from jaxtyping import install_import_hook
 
 # import protocols and generic classes
-from .data import MultiEvenlySpacedTensors, MultiTemporalSampler
+from .data import MultiEvenlySpacedTensors, MultiTemporalSampler, MultiTrajHDF5
 from .sde import LatentSDE, LatentSDEConfig, SDE
 from .kernel import Kernel
 from .sdeprior import LatentDriftConfig, LatentDispersionConfig, LatentDrift, LatentDispersion

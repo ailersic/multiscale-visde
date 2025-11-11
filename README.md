@@ -2,18 +2,18 @@
 
 ### [Preprint](https://arxiv.org/abs/2506.22655) 
 
-[Andrew F. Ilersich](https://ailersic.github.io/), 
+[Andrew F. Ilersich](https://www.ilersich.com/), 
 [Prasanth B. Nair](http://arrow.utias.utoronto.ca/~pbn)<br>
 University of Toronto Institute for Aerospace Studies
 
-This is the official PyTorch implementation of the paper "Learning Stochastic Multiscale Models".
+This is the official PyTorch implementation of the paper "Learning Stochastic Multiscale Models."
 
 
 <p align="center">
-  <img align="middle" src="./images/cylinder_2d/512_5_2000_0.0001_2000_augment/test_multiscale.gif" alt="Multiscale 2D Cylinder Flow Model" width="100%"/>
+  <img align="middle" src="./images/shallow_water_2d/data_900_50_50_noisy_64_5_64_2_1_20_0.0001_2000_augment/anim_captioned.gif" alt="Multiscale 2D Shallow Water Model" width="100%"/>
 </p>
 
-*Learned stochastic multiscale model of fluid flow over a cylinder. Our method explicitly separates the dynamics into a coarse macroscale state and a corrective microscale state, which are combined to reconstruct the full, high-resolution flow field.*
+*Learned stochastic multiscale model of a radial dam break. Our method explicitly separates the dynamics into a coarse macroscale state and a corrective microscale state, which are combined to reconstruct the full, high-resolution flow field.*
 
 ## Overview
 
@@ -38,17 +38,19 @@ This explicit scale separation allows our model not only to learn the complex in
 
 - **Generalizable framework**: Our framework is applicable to a broad class of  systems with multiscale spatio-temporal dynamics (e.g., fluids, climate, biology, materials).
 
-## Repository Structure 
+## Repository Structure
 
-`experiments/` Training scripts and results for all multiscale test cases
+`datasets/` Code for generating/loading data in each test case
+
+`experiments_refac/` Training scripts and results for all multiscale test cases
 
 `visde/` Core variational inference framework
 
 `pyproject.toml`: Dependencies managed with Poetry
 
-Each experiment folder contains detailed READMEs with setup instructions, visualizations, and results for the 1d KdV equation, 2D Burgers equation, and the 2D cylinder flow problem.
+Each experiment folder contains detailed READMEs with setup instructions, visualizations, and results for the wave equation (1D), KdV equation (1D), Burgers equation (2D), cylinder flow (2D), and radial dam break with shallow water equations (2D).
 
-Our multiscale modeling codebase builds upon the [Variational Inference for Stochastic Differential Equations (VISDE)](https://github.com/ailersic/visde.git) PyTorch library.
+Our multiscale modeling codebase uses the core inference engine from the [Variational Inference for Stochastic Differential Equations (VISDE)](https://github.com/ailersic/visde.git) PyTorch library.
 
 ## Quick Start
 
@@ -56,14 +58,17 @@ Our multiscale modeling codebase builds upon the [Variational Inference for Stoc
 cd ~/path/to/multiscale-visde
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 poetry install
-poetry run python experiments/kdv_1d/run_visde.py
+poetry run python experiments_refac/kdv_1d/run_visde.py
 ```
 
 ## Citation 
 ```bibtex
-@article{ilersich2024multiscale,
-  title={Learning Stochastic Multiscale Models},
-  author={Ilersich, Andrew F. and Nair, Prasanth B.},
-  journal={arXiv preprint},
-  year={2024}
+@article{Ilersich_Nair_2025_Multiscale,
+      title={Learning Stochastic Multiscale Models}, 
+      author={Andrew F. Ilersich and Prasanth B. Nair},
+      year={2025},
+      eprint={2506.22655},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2506.22655}, 
 }

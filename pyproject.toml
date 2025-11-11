@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "multiscale-visde"
+name = "hv-visde"
 version = "0.1.0"
-description = "Learning Stochastic Multiscale Models by Variational Inference"
-authors = ["Anonymous"]
+description = "Hidden Variable VISDE"
+authors = ["Andrew Francesco Ilersich", "Prasanth B. Nair"]
 license = "GNUv3"
 readme = "README.md"
 
@@ -15,12 +15,13 @@ pytorch-lightning = "^2.3.3"
 tensorboard = "^2.12.1"
 torchsde = "^0.2.5"
 torch = "^2.4.0"
-torchvision = "^0.19.0"
 typing-extensions = "^4.12.2"
 torchdiffeq = "^0.2.4"
+kolsol = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 matplotlib = "^3.9.0"
+ipykernel = "^6.30.1"
 
 [build-system]
 requires = ["poetry-core"]

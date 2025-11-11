@@ -1,0 +1,2 @@
+[350.]
+Mean NFE per traj: 350.00000

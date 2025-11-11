@@ -1,7 +1,8 @@
 import torch
 from torch import nn, Tensor
 from typing import Protocol
-from jaxtyping import Float, Union
+from jaxtyping import Float, Union, jaxtyped
+from beartype import beartype
 # ruff: noqa: F821, F722
 
 def softplus(x: Tensor) -> Tensor:
@@ -51,11 +52,12 @@ class DeepGaussianKernel(nn.Module):
         else:
             self.register_buffer("offset", torch.tensor(0.5 * (batch_size - 1) * dt))
             self.register_buffer("scale", torch.tensor(0.5 * (batch_size - 1) * dt))
+        self.register_buffer("min_lens", torch.tensor(2 / batch_size))
 
     @property
     def lens(self) -> Float[Tensor, ""]:
-        return softplus(self.rawlens)
-    
+        return softplus(self.rawlens) + self.min_lens
+
     @property
     def var(self) -> Float[Tensor, ""]:
         return softplus(self.rawvar)
@@ -69,9 +71,10 @@ class DeepGaussianKernel(nn.Module):
     ) -> Float[Tensor, "n 1"]:
         return (t - self.offset) / self.scale
 
+    @jaxtyped(typechecker=beartype)
     def forward(self,
-                t1: Float[Tensor, "n 1"],
-                t2: Float[Tensor, "m 1"]
+                t1: Float[Tensor, "m 1"],
+                t2: Float[Tensor, "n 1"]
     ) -> Float[Tensor, "m n"]:
         t1, t2 = self.rescale(t1), self.rescale(t2)
         t1, t2 = self.net(t1) + t1, self.net(t2) + t2
@@ -79,3 +82,4 @@ class DeepGaussianKernel(nn.Module):
         t_diff = t1.view(t1.shape[0], 1, 1) - t2.view(1, t2.shape[0], 1)
         l2 = self.lens.pow(2)
         return torch.exp(-0.5*t_diff.pow(2).div(l2).sum(-1)).mul(self.sigma)
+    

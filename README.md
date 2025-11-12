@@ -46,7 +46,9 @@ This explicit scale separation allows our model not only to learn the complex in
 
 `visde/` Core variational inference framework
 
-`pyproject.toml`: Dependencies managed with Poetry
+`multiscale/` Additional modules for multiscale architecture with VISDE
+
+`pyproject.toml` Dependencies managed with Poetry
 
 Each experiment folder contains detailed READMEs with setup instructions, visualizations, and results for the wave equation (1D), KdV equation (1D), Burgers equation (2D), cylinder flow (2D), and radial dam break with shallow water equations (2D).
 
